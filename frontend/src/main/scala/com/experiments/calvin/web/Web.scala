@@ -5,13 +5,14 @@ import java.time.Instant
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import com.experiments.calvin.models.{Event, UserInteraction}
+import com.experiments.calvin.models.Event._
+import com.experiments.calvin.services.Journal
 
 import scala.util.Try
 
 trait Web {
-  sealed trait Event
-  case object Click      extends Event
-  case object Impression extends Event
+  val journal: Journal
 
   def extractEvent(action: Event => Route): Route =
     parameter('event) { rawEvent =>
@@ -42,7 +43,10 @@ trait Web {
       post {
         extractEvent { event =>
           extractTimestamp { instant =>
-            complete(s"POST: I got $event and $instant")
+            onComplete(journal.persist(UserInteraction(instant, event))) {
+              case util.Success(_) => complete(OK)
+              case util.Failure(_) => complete(InternalServerError)
+            }
           }
         }
       } ~ get {
