@@ -1,14 +1,19 @@
 package com.experiments.calvin
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.kafka.ProducerSettings
+import akka.pattern.{Backoff, BackoffSupervisor}
+import akka.routing.{DefaultResizer, SmallestMailboxPool}
 import akka.stream.ActorMaterializer
-import com.experiments.calvin.services.{Journal, KafkaJournal}
+import akka.util.Timeout
+import com.experiments.calvin.actors.KafkaJournal
+import com.experiments.calvin.services.{Journal, JournalImpl}
 import com.experiments.calvin.web.Web
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object Main extends App with Web {
@@ -16,6 +21,7 @@ object Main extends App with Web {
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext   = system.dispatcher
   val settings: Settings              = Settings(system)
+  implicit val timeout: Timeout       = Timeout(settings.kafka.service.timeout)
 
   val kafkaProducerSettings: ProducerSettings[String, String] =
     ProducerSettings(
@@ -24,7 +30,22 @@ object Main extends App with Web {
       valueSerializer = new StringSerializer
     ).withBootstrapServers(settings.kafka.uris)
 
-  override val journal: Journal = new KafkaJournal(settings, mat, kafkaProducerSettings)(ec)
+  val kafkaRef: ActorRef = {
+    val actorSettings = settings.kafka.actor
+    val props = BackoffSupervisor.props(
+      SmallestMailboxPool(
+        nrOfInstances = actorSettings.minInstances,
+        resizer = Some(DefaultResizer(actorSettings.minInstances, actorSettings.maxInstances))
+      ).props(KafkaJournal.props(settings, kafkaProducerSettings)),
+      childName = "journal",
+      minBackoff = 3.seconds,
+      maxBackoff = 30.seconds,
+      randomFactor = 0.2
+    )
+    system.actorOf(props, "kafka-router")
+  }
+
+  override val journal: Journal = new JournalImpl(kafkaRef)
 
   Http().bindAndHandle(routes, "0.0.0.0", 9001).onComplete {
     case Success(binding) =>
