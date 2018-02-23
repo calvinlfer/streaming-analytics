@@ -38,10 +38,12 @@ lazy val `stream-processor` =
   (project in file("stream-processor"))
     .settings(
       libraryDependencies ++= {
-        val akka   = "com.typesafe.akka"
-        val akkaV  = "2.5.9"
-        val circe  = "io.circe"
-        val circeV = "0.9.1"
+        val akka     = "com.typesafe.akka"
+        val akkaV    = "2.5.9"
+        val circe    = "io.circe"
+        val circeV   = "0.9.1"
+        val phantom  = "com.outworkers"
+        val phantomV = "2.20.1"
 
         Seq(
           akka                  %% "akka-actor"        % akkaV,
@@ -53,6 +55,9 @@ lazy val `stream-processor` =
           circe                 %% "circe-parser"      % circeV,
           circe                 %% "circe-java8"       % circeV,
           "org.scalatest"       %% "scalatest"         % "3.0.4" % Test,
+          phantom               %% "phantom-dsl"       % phantomV,
+          phantom               %% "phantom-jdk8"      % phantomV,
+          "org.scala-lang"      % "scala-reflect"      % scalaVersion.value,
           "net.agkn"            % "hll"                % "1.6.0",
           "ch.qos.logback"      % "logback-classic"    % "1.2.3",
           "org.codehaus.groovy" % "groovy"             % "2.4.12"

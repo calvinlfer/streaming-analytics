@@ -3,6 +3,7 @@ package com.experiments.calvin
 import java.time.ZonedDateTime
 
 import com.experiments.calvin.models.{AnalyticsEvent, UserId}
+import net.agkn.hll.HLL
 
 trait Aggregation {
   type Year  = Int
@@ -34,4 +35,17 @@ trait Aggregation {
       .mapValues(seq => seq.map(_.userId).distinct)
       .toList
   }
+
+  def mergeHLLMappings(ma: Map[YMDH, HLL], mb: Map[YMDH, HLL]): Map[YMDH, HLL] =
+    ma.foldLeft(mb) {
+      case (acc, (ymdh, hll)) =>
+        acc.get(ymdh) match {
+          case Some(existing) =>
+            existing.union(hll) // mutable :-(
+            acc + (ymdh -> existing)
+
+          case None =>
+            acc + (ymdh -> hll)
+        }
+    }
 }
