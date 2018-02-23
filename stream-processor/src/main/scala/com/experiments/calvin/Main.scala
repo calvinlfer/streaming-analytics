@@ -23,7 +23,6 @@ import net.agkn.hll.serialization.SerializationUtil
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.hashing.MurmurHash3
 
 object Main extends App with Aggregation {
   implicit val system: ActorSystem    = ActorSystem("kafka-event-consumer")
@@ -56,16 +55,7 @@ object Main extends App with Aggregation {
       val offsets                          = envs.map(_.offset)
       val result: Seq[(YMDH, Seq[UserId])] = uniqueUserIdByYMDH(analytics)
 
-      val currentHLLMappings: Map[YMDH, HLL] = result.map {
-        case (ymdh: YMDH, userIds: Seq[UserId]) =>
-          val log2m    = 13
-          val regWidth = 5
-          val hll      = new HLL(log2m, regWidth)
-          userIds
-            .map(MurmurHash3.stringHash(_).toLong)
-            .foreach(hll.addRaw)
-          ymdh -> hll
-      }.toMap
+      val currentHLLMappings: Map[YMDH, HLL] = userEstimatesByYMDH(result).toMap
       val dbHLLMappings: Future[Map[Main.YMDH, HLL]] =
         Future
           .sequence(
