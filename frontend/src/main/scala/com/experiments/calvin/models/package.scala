@@ -1,6 +1,6 @@
 package com.experiments.calvin
 
-import java.time.Instant
+import java.time.ZonedDateTime
 
 import enumeratum.EnumEntry._
 import enumeratum._
@@ -14,5 +14,5 @@ package object models {
     case object Impression extends Event
   }
 
-  case class UserInteraction(timestamp: Instant, event: Event)
+  case class UserInteraction(timestamp: ZonedDateTime, event: Event, userId: String)
 }

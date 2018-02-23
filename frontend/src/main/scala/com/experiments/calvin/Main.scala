@@ -3,7 +3,7 @@ package com.experiments.calvin
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.kafka.ProducerSettings
-import akka.pattern.{Backoff, BackoffSupervisor}
+import akka.pattern.BackoffSupervisor
 import akka.routing.{DefaultResizer, SmallestMailboxPool}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object Main extends App with Web {
-  implicit val system: ActorSystem    = ActorSystem()
+  implicit val system: ActorSystem    = ActorSystem("frontend")
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext   = system.dispatcher
   val settings: Settings              = Settings(system)

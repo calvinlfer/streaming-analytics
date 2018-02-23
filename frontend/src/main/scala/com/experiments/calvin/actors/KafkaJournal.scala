@@ -49,7 +49,7 @@ class KafkaJournal(settings: Settings, producerSettings: ProducerSettings[String
               record = new ProducerRecord[String, String](
                 settings.kafka.topic,
                 kafkaTopicPartitioner(settings.kafka.partitionSize, e),
-                e.timestamp.toEpochMilli.toString,
+                e.timestamp.toInstant.toEpochMilli.toString,
                 e.asJson.noSpaces
               ),
               passThrough = e

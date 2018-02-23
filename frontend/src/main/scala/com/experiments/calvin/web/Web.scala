@@ -1,6 +1,6 @@
 package com.experiments.calvin.web
 
-import java.time.Instant
+import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
@@ -29,23 +29,25 @@ trait Web {
       )
     }
 
-  def extractTimestamp(action: Instant => Route): Route =
+  def extractTimestamp(action: ZonedDateTime => Route): Route =
     parameter('timestamp.as[Long]) { rawTimestamp =>
       val tryInstant = Try(Instant.ofEpochMilli(rawTimestamp))
       tryInstant.fold(
         throwable => complete(BadRequest, throwable.getMessage),
-        validInstant => action(validInstant)
+        validInstant => action(validInstant.atZone(ZoneId.of("UTC")))
       )
     }
 
   val routes: Route =
     pathPrefix("analytics") {
       post {
-        extractEvent { event =>
-          extractTimestamp { instant =>
-            onComplete(journal.persist(UserInteraction(instant, event))) {
-              case util.Success(_) => complete(OK)
-              case util.Failure(_) => complete(InternalServerError)
+        parameter("userId") { userId =>
+          extractEvent { event =>
+            extractTimestamp { instant =>
+              onComplete(journal.persist(UserInteraction(instant, event, userId))) {
+                case util.Success(_) => complete(OK)
+                case util.Failure(_) => complete(InternalServerError)
+              }
             }
           }
         }
