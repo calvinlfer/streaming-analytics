@@ -8,8 +8,8 @@ import org.scalatest.{FunSpec, MustMatchers}
 class AggregationSpec extends FunSpec with MustMatchers with Aggregation {
   describe("extractYMDH") {
     it("must extract the Year, Month, Day of Month and Hour of Day (YMDH) from the time provided") {
-      val zdt                      = ZonedDateTime.parse("2018-02-21T09:31:00Z")
-      val (year, month, day, hour) = extractYMDH(zdt)
+      val zdt                          = ZonedDateTime.parse("2018-02-21T09:31:00Z")
+      val YMDH(year, month, day, hour) = extractYMDH(zdt)
       year mustBe 2018
       month mustBe 2
       day mustBe 21

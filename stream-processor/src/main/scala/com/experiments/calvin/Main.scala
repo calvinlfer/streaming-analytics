@@ -6,7 +6,7 @@ import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.Consumer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
-import com.experiments.calvin.models.{AnalyticsEvent, KafkaEnvelope}
+import com.experiments.calvin.models.{AnalyticsEvent, KafkaEnvelope, UserId}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import io.circe._
@@ -14,8 +14,12 @@ import io.circe.generic.auto._
 import io.circe.java8.time._
 import io.circe.parser._
 import io.circe.syntax._
+import net.agkn.hll.HLL
 
-object Main extends App {
+import scala.concurrent.duration._
+import scala.util.hashing.MurmurHash3
+
+object Main extends App with Aggregation {
   implicit val system: ActorSystem    = ActorSystem("kafka-event-consumer")
   implicit val mat: ActorMaterializer = ActorMaterializer()
   val settings: Settings              = Settings(system)
@@ -37,10 +41,28 @@ object Main extends App {
     )
     .filter(_.payload.isRight) // TODO: bad messages should go in another topic and be removed
     .map(env => env.map(_.right.get))
-    .map { env =>
-      println(env.payload)
-      env.offset
+    .groupedWithin(10000, 30.seconds)
+    .map { envs =>
+      val analytics                        = envs.map(_.payload)
+      val offsets                          = envs.map(_.offset)
+      val result: Seq[(YMDH, Seq[UserId])] = uniqueUserIdByYMDH(analytics)
+      val hllMappings: Seq[(YMDH, HLL)] = result.map {
+        case (ymdh: YMDH, userIds: Seq[UserId]) =>
+          val log2m    = 13
+          val regWidth = 5
+          val hll      = new HLL(log2m, regWidth)
+          userIds
+            .map(MurmurHash3.stringHash(_).toLong)
+            .foreach(hll.addRaw)
+          ymdh -> hll
+      }
+      hllMappings.foreach {
+        case (ymdh, hll) =>
+          println(s"YMDH: $ymdh, estimate: ${hll.cardinality()}")
+      }
+      offsets
     }
+    .mapConcat(identity)
     .batch(max = 20, seedOffset => CommittableOffsetBatch.empty.updated(seedOffset))((acc, next) => acc.updated(next))
     .mapAsync(1)(_.commitScaladsl())
     .to(Sink.ignore)

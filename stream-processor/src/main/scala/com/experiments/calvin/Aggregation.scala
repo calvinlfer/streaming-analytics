@@ -9,7 +9,7 @@ trait Aggregation {
   type Month = Int
   type Day   = Int
   type Hour  = Int
-  type YMDH  = (Year, Month, Day, Hour)
+  case class YMDH(year: Year, month: Month, day: Day, hour: Hour)
   type Count = Int
 
   def extractYMDH(zdt: ZonedDateTime): YMDH = {
@@ -17,7 +17,7 @@ trait Aggregation {
     val month: Month = zdt.getMonth.getValue
     val day: Day     = zdt.getDayOfMonth
     val hour: Hour   = zdt.getHour
-    (year, month, day, hour)
+    YMDH(year, month, day, hour)
   }
 
   def countByYMDH(es: Seq[AnalyticsEvent]): List[(YMDH, Count)] = {

@@ -53,6 +53,7 @@ lazy val `stream-processor` =
           circe                 %% "circe-parser"      % circeV,
           circe                 %% "circe-java8"       % circeV,
           "org.scalatest"       %% "scalatest"         % "3.0.4" % Test,
+          "net.agkn"            % "hll"                % "1.6.0",
           "ch.qos.logback"      % "logback-classic"    % "1.2.3",
           "org.codehaus.groovy" % "groovy"             % "2.4.12"
         )
