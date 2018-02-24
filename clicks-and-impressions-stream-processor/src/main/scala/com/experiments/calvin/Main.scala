@@ -44,7 +44,7 @@ object Main extends App with Aggregation with Streams {
       .sequence {
         countByYMDH(analytics).map {
           case (YMDH(y, m, d, h), addCount) =>
-            repo.persist(y, m, d, h, "click", addCount)
+            repo.persist(y, m, d, h, eventType, addCount)
         }
       }
       .map(_ => offsets)

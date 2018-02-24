@@ -7,8 +7,8 @@ import ConsistencyLevel._
 
 import scala.concurrent.Future
 
-abstract class CassandraUniqueUsersByYMDH
-    extends Table[CassandraUniqueUsersByYMDH, RepoEventCount]
+abstract class CassandraEventCountByYMDH
+    extends Table[CassandraEventCountByYMDH, RepoEventCount]
     with EventCountByYMDH {
   object year      extends IntColumn with PartitionKey
   object month     extends IntColumn with PartitionKey
