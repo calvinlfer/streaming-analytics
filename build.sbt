@@ -27,6 +27,7 @@ lazy val `frontend` =
           circe                 %% "circe-generic"     % circeV,
           circe                 %% "circe-parser"      % circeV,
           circe                 %% "circe-java8"       % circeV,
+          "de.heikoseeberger"   %% "akka-http-circe"   % "1.20.0-RC2",
           "org.scalatest"       %% "scalatest"         % "3.0.4" % Test,
           phantom               %% "phantom-dsl"       % phantomV,
           phantom               %% "phantom-jdk8"      % phantomV,

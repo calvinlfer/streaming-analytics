@@ -8,8 +8,10 @@ import akka.routing.{DefaultResizer, SmallestMailboxPool}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.experiments.calvin.actors.KafkaJournal
-import com.experiments.calvin.services.{Journal, JournalImpl}
+import com.experiments.calvin.repositories.AppDatabase
+import com.experiments.calvin.services.{Journal, JournalImpl, UserAnalytics, UserAnalyticsImpl}
 import com.experiments.calvin.web.Web
+import com.outworkers.phantom.dsl._
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.ExecutionContext
@@ -22,6 +24,10 @@ object Main extends App with Web {
   implicit val ec: ExecutionContext   = system.dispatcher
   val settings: Settings              = Settings(system)
   implicit val timeout: Timeout       = Timeout(settings.kafka.service.timeout)
+  val appDatabase                     = AppDatabase(settings)
+  appDatabase.create(30.seconds)
+
+  val uniqueUsersRepo = appDatabase.uniqueUsersByYMDH
 
   val kafkaProducerSettings: ProducerSettings[String, String] =
     ProducerSettings(
@@ -46,6 +52,7 @@ object Main extends App with Web {
   }
 
   override val journal: Journal = new JournalImpl(kafkaRef)
+  override val analytics: UserAnalytics = new UserAnalyticsImpl(uniqueUsersRepo)
 
   Http().bindAndHandle(routes, "0.0.0.0", 9001).onComplete {
     case Success(binding) =>

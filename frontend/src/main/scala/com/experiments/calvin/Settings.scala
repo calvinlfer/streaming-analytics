@@ -26,6 +26,23 @@ class Settings private (config: Config) {
       val timeout: FiniteDuration = getDuration("app.kafka.service.ask-timeout")
     }
   }
+
+  object cassandra {
+    val host: String           = config.getString("app.cassandra.host")
+    val port: Int              = config.getInt("app.cassandra.port")
+    val keyspace: String       = config.getString("app.cassandra.keyspace")
+    val trustStorePath: String = config.getString("app.cassandra.truststore-path")
+    val trustStorePass: String = config.getString("app.cassandra.truststore-password")
+    val username: Option[String] = {
+      val user = config.getString("app.cassandra.username")
+      if (user.nonEmpty) Some(user) else None
+    }
+    val password: Option[String] = {
+      val pass = config.getString("app.cassandra.password")
+      if (pass.nonEmpty) Some(pass) else None
+    }
+    val autoInitKeyspace: Boolean = config.getBoolean("app.cassandra.initialize-keyspace")
+  }
 }
 
 object Settings {

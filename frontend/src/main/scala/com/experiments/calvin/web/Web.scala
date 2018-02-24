@@ -7,12 +7,16 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.experiments.calvin.models.{Event, UserInteraction}
 import com.experiments.calvin.models.Event._
-import com.experiments.calvin.services.Journal
+import com.experiments.calvin.services.{Journal, UserAnalytics}
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe._
+import io.circe.generic.auto._
 
 import scala.util.Try
 
 trait Web {
   val journal: Journal
+  val analytics: UserAnalytics
 
   def extractEvent(action: Event => Route): Route =
     parameter('event) { rawEvent =>
@@ -52,8 +56,11 @@ trait Web {
           }
         }
       } ~ get {
-        extractTimestamp { instant =>
-          complete(s"GET: I got $instant")
+        extractTimestamp { zdt =>
+          onComplete(analytics.dataForTimestamp(zdt)) {
+            case util.Success(data) => complete(data)
+            case util.Failure(_)    => complete(InternalServerError)
+          }
         }
       }
     }
