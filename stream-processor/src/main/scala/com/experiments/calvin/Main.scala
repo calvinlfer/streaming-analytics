@@ -2,14 +2,15 @@ package com.experiments.calvin
 
 import java.nio.ByteBuffer
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.CommittableOffsetBatch
-import akka.kafka.{ConsumerSettings, Subscriptions}
+import akka.kafka.{ConsumerMessage, ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.Consumer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import com.experiments.calvin.models.{AnalyticsEvent, KafkaEnvelope, UserId}
-import com.experiments.calvin.repositories.AppDatabase
+import com.experiments.calvin.repositories.{AppDatabase, RepoUniqueUsers}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import io.circe._
@@ -21,6 +22,7 @@ import net.agkn.hll.HLL
 import com.outworkers.phantom.dsl._
 import net.agkn.hll.serialization.SerializationUtil
 
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -40,6 +42,47 @@ object Main extends App with Aggregation {
     .withGroupId(settings.kafka.consumerGroupId)
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest") // consume from the earliest offset when no initial offset is present
 
+  def uniqueUsersByYMDHFlow
+    : Flow[immutable.Seq[KafkaEnvelope[AnalyticsEvent]], immutable.Seq[ConsumerMessage.CommittableOffset], NotUsed] = {
+    def dBReprToInMemoryRepr(seq: Iterable[RepoUniqueUsers]): Map[YMDH, HLL] =
+      seq.foldLeft(Map.empty[YMDH, HLL]) { (acc, next) =>
+        val hllBytes = next.hllBytes.array()
+        val hll      = HLL.fromBytes(hllBytes)
+        acc + (YMDH(next.year, next.month, next.day, next.hour) -> hll)
+      }
+
+    Flow[immutable.Seq[KafkaEnvelope[AnalyticsEvent]]].mapAsync(1) {
+      envs: immutable.Seq[KafkaEnvelope[AnalyticsEvent]] =>
+        val analytics: immutable.Seq[AnalyticsEvent]                  = envs.map(_.payload)
+        val offsets: immutable.Seq[ConsumerMessage.CommittableOffset] = envs.map(_.offset)
+        val result: Seq[(YMDH, Seq[UserId])]                          = uniqueUserIdByYMDH(analytics)
+
+        val currentHLLMappings: Map[YMDH, HLL] = userEstimatesByYMDH(result).toMap
+        val dbHLLMappings: Future[Map[YMDH, HLL]] =
+          Future
+            .sequence(
+              currentHLLMappings.keys
+                .map(ymdh => uniqueUsersRepo.find(ymdh.year, ymdh.month, ymdh.day, ymdh.hour))
+            )
+            .map(_.flatten)
+            .map(dBReprToInMemoryRepr)
+
+        val futMergedHLLMappings: Future[Map[YMDH, HLL]] = dbHLLMappings.map { dbHLLs =>
+          mergeHLLMappings(currentHLLMappings, dbHLLs)
+        }
+
+        val persistResults = futMergedHLLMappings.map { mergedHLLMappings =>
+          mergedHLLMappings.map {
+            case (YMDH(y, m, d, h), hll) =>
+              val hllBytes = ByteBuffer.wrap(hll.toBytes(SerializationUtil.VERSION_ONE))
+              println(s"For Year $y, Month $m, Day $d, Hour $h, ${hll.cardinality()} unique users came through")
+              uniqueUsersRepo.persist(y, m, d, h, hllBytes)
+          }
+        }
+        persistResults.map(_ => offsets)
+    }
+  }
+
   Consumer
     .committableSource(consumerSettings, Subscriptions.topics(settings.kafka.topic))
     .map(
@@ -50,42 +93,7 @@ object Main extends App with Aggregation {
     .filter(_.payload.isRight) // TODO: bad messages should go in another topic and be removed
     .map(env => env.map(_.right.get))
     .groupedWithin(10000, 30.seconds)
-    .mapAsync(1) { envs =>
-      val analytics                        = envs.map(_.payload)
-      val offsets                          = envs.map(_.offset)
-      val result: Seq[(YMDH, Seq[UserId])] = uniqueUserIdByYMDH(analytics)
-
-      val currentHLLMappings: Map[YMDH, HLL] = userEstimatesByYMDH(result).toMap
-      val dbHLLMappings: Future[Map[Main.YMDH, HLL]] =
-        Future
-          .sequence(
-            currentHLLMappings.keys
-              .map(ymdh => uniqueUsersRepo.find(ymdh.year, ymdh.month, ymdh.day, ymdh.hour))
-          )
-          .map(_.flatten)
-          .map(
-            seq =>
-              seq.foldLeft(Map.empty[YMDH, HLL]) { (acc, next) =>
-                val hllBytes = next.hllBytes.array()
-                val hll      = HLL.fromBytes(hllBytes)
-                acc + (YMDH(next.year, next.month, next.day, next.hour) -> hll)
-            }
-          )
-
-      val futMergedHLLMappings: Future[Map[YMDH, HLL]] = dbHLLMappings.map { dbHLLs =>
-        mergeHLLMappings(currentHLLMappings, dbHLLs)
-      }
-
-      val persistResults = futMergedHLLMappings.map { mergedHLLMappings =>
-        mergedHLLMappings.map {
-          case (YMDH(y, m, d, h), hll) =>
-            val hllBytes = ByteBuffer.wrap(hll.toBytes(SerializationUtil.VERSION_ONE))
-            println(s"For Year $y, Month $m, Day $d, Hour $h, ${hll.cardinality()} unique users came through")
-            uniqueUsersRepo.persist(y, m, d, h, hllBytes)
-        }
-      }
-      persistResults.map(_ => offsets)
-    }
+    .via(uniqueUsersByYMDHFlow)
     .mapConcat(identity)
     .batch(max = 20, seedOffset => CommittableOffsetBatch.empty.updated(seedOffset))((acc, next) => acc.updated(next))
     .mapAsync(1)(_.commitScaladsl())
