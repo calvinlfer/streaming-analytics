@@ -78,7 +78,6 @@ trait Streams {
           mergedHLLMappings.map {
             case (YMDH(y, m, d, h), hll) =>
               val hllBytes = ByteBuffer.wrap(hll.toBytes(SerializationUtil.VERSION_ONE))
-              println(s"For Year $y, Month $m, Day $d, Hour $h, ${hll.cardinality()} unique users came through")
               uniqueUsersRepo.persist(y, m, d, h, hllBytes)
           }
         }
