@@ -2,7 +2,7 @@ package com.experiments.calvin
 
 import java.time.ZonedDateTime
 
-import com.experiments.calvin.models.{AnalyticsEvent, UserId}
+import com.experiments.calvin.models._
 import org.scalatest.{FunSpec, MustMatchers}
 
 class AggregationSpec extends FunSpec with MustMatchers with Aggregation {

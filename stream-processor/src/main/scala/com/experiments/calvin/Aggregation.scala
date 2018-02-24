@@ -2,19 +2,12 @@ package com.experiments.calvin
 
 import java.time.ZonedDateTime
 
-import com.experiments.calvin.models.{AnalyticsEvent, UserId}
+import com.experiments.calvin.models._
 import net.agkn.hll.HLL
 
 import scala.util.hashing.MurmurHash3
 
 trait Aggregation {
-  type Year  = Int
-  type Month = Int
-  type Day   = Int
-  type Hour  = Int
-  case class YMDH(year: Year, month: Month, day: Day, hour: Hour)
-  type Count = Int
-
   def extractYMDH(zdt: ZonedDateTime): YMDH = {
     val year: Year   = zdt.getYear
     val month: Month = zdt.getMonth.getValue
