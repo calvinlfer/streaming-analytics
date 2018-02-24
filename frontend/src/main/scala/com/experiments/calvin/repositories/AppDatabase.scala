@@ -12,6 +12,7 @@ import javax.net.ssl.{SSLContext, TrustManagerFactory}
 class AppDatabase private[repositories] (override val connector: CassandraConnection)
     extends Database[AppDatabase](connector) {
   object uniqueUsersByYMDH extends CassandraUniqueUsersByYMDH with connector.Connector
+  object countsByYMDH      extends CassandraEventCountByYMDH with connector.Connector
 }
 
 object AppDatabase {

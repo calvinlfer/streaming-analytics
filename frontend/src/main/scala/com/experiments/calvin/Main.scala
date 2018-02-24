@@ -28,6 +28,7 @@ object Main extends App with Web {
   appDatabase.create(30.seconds)
 
   val uniqueUsersRepo = appDatabase.uniqueUsersByYMDH
+  val eventsCountRepo = appDatabase.countsByYMDH
 
   val kafkaProducerSettings: ProducerSettings[String, String] =
     ProducerSettings(
@@ -51,8 +52,8 @@ object Main extends App with Web {
     system.actorOf(props, "kafka-router")
   }
 
-  override val journal: Journal = new JournalImpl(kafkaRef)
-  override val analytics: UserAnalytics = new UserAnalyticsImpl(uniqueUsersRepo)
+  override val journal: Journal         = new JournalImpl(kafkaRef)
+  override val analytics: UserAnalytics = new UserAnalyticsImpl(uniqueUsersRepo, eventsCountRepo)
 
   Http().bindAndHandle(routes, "0.0.0.0", 9001).onComplete {
     case Success(binding) =>
