@@ -34,6 +34,11 @@ class Settings private (config: Config) {
     val autoInitKeyspace: Boolean = config.getBoolean("app.cassandra.initialize-keyspace")
   }
 
+  object batch {
+    val maxElements: Int            = config.getInt("app.batch.max-elements")
+    val maxDuration: FiniteDuration = getDuration("app.batch.max-time-to-wait")
+    val updateConcurrency: Int      = config.getInt("app.batch.update-concurrency")
+  }
 }
 
 object Settings {

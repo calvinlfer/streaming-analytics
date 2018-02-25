@@ -11,6 +11,12 @@ class Settings private (config: Config) {
     FiniteDuration(duration.toMillis, MILLISECONDS)
   }
 
+  object batch {
+    val maxElements: Int            = config.getInt("app.batch.max-elements")
+    val maxDuration: FiniteDuration = getDuration("app.batch.max-time-to-wait")
+    val updateConcurrency: Int      = config.getInt("app.batch.update-concurrency")
+  }
+
   object kafka {
     val uris: String            = config.getString("app.kafka.uris")
     val topic: String           = config.getString("app.kafka.topic")

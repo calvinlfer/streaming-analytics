@@ -18,6 +18,8 @@ import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Streams {
+  val settings: Settings
+
   def filterBadMessages[A](implicit decoder: Decoder[A]): Flow[KafkaEnvelope[String], KafkaEnvelope[A], NotUsed] = {
     val cleaner: Flow[KafkaEnvelope[Either[Error, A]], KafkaEnvelope[A], NotUsed] = Flow.fromGraph(GraphDSL.create() {
       implicit builder =>
@@ -54,7 +56,7 @@ trait Streams {
         acc + (YMDH(next.year, next.month, next.day, next.hour) -> hll)
       }
 
-    Flow[immutable.Seq[KafkaEnvelope[AnalyticsEvent]]].mapAsync(1) {
+    Flow[immutable.Seq[KafkaEnvelope[AnalyticsEvent]]].mapAsync(settings.batch.updateConcurrency) {
       envs: immutable.Seq[KafkaEnvelope[AnalyticsEvent]] =>
         val analytics: immutable.Seq[AnalyticsEvent]                  = envs.map(_.payload)
         val offsets: immutable.Seq[ConsumerMessage.CommittableOffset] = envs.map(_.offset)

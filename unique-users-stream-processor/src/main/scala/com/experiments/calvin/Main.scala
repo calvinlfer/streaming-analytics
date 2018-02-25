@@ -36,7 +36,7 @@ object Main extends App with Aggregation with Streams {
     .committableSource(consumerSettings, Subscriptions.topics(settings.kafka.topic))
     .map(kafkaMsg => KafkaEnvelope(kafkaMsg.record.value(), kafkaMsg.committableOffset))
     .via(filterBadMessages[AnalyticsEvent])
-    .groupedWithin(10000, 30.seconds)
+    .groupedWithin(settings.batch.maxElements, settings.batch.maxDuration)
     .via(uniqueUsersByYMDHFlow(uniqueUsersRepo))
     .mapConcat(identity)
     .batch(max = 20, seedOffset => CommittableOffsetBatch.empty.updated(seedOffset))((acc, next) => acc.updated(next))

@@ -16,6 +16,8 @@ import scala.concurrent.duration._
 import scala.util.hashing.MurmurHash3
 
 trait Streams {
+  val settings: Settings
+
   def filterBadMessages[A](implicit decoder: Decoder[A]): Flow[KafkaEnvelope[String], KafkaEnvelope[A], NotUsed] = {
     val cleaner: Flow[KafkaEnvelope[Either[Error, A]], KafkaEnvelope[A], NotUsed] = Flow.fromGraph(GraphDSL.create() {
       implicit builder =>
@@ -74,13 +76,19 @@ trait Streams {
       val merger =
         builder.add(Merge[immutable.Seq[ConsumerMessage.CommittableOffset]](inputPorts = 2, eagerComplete = false))
 
+      val batchSettings = settings.batch
+
       // click events
-      partitioner.out(0).groupedWithin(10000, 15.seconds).mapAsync(1)(saveEvents(eventsRepo, "click")) ~>
-      merger.in(0)
+      partitioner
+        .out(0)
+        .groupedWithin(batchSettings.maxElements, batchSettings.maxDuration)
+        .mapAsync(batchSettings.updateConcurrency)(saveEvents(eventsRepo, "click")) ~> merger.in(0)
 
       // impression events
-      partitioner.out(1).groupedWithin(10000, 15.seconds).mapAsync(1)(saveEvents(eventsRepo, "impression")) ~>
-      merger.in(1)
+      partitioner
+        .out(1)
+        .groupedWithin(batchSettings.maxElements, batchSettings.maxDuration)
+        .mapAsync(batchSettings.updateConcurrency)(saveEvents(eventsRepo, "impression")) ~> merger.in(1)
 
       FlowShape(partitioner.in, merger.out)
     })
