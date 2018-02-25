@@ -14,6 +14,7 @@ val phantomV = "2.20.1"
 
 lazy val `frontend` =
   (project in file("frontend"))
+    .enablePlugins(JavaAppPackaging)
     .settings(
       libraryDependencies ++= {
         val beachape = "com.beachape"
@@ -43,6 +44,7 @@ lazy val `frontend` =
 
 lazy val `unique-users-stream-processor` =
   (project in file("unique-users-stream-processor"))
+    .enablePlugins(JavaAppPackaging)
     .settings(
       libraryDependencies ++= {
         Seq(
@@ -68,6 +70,7 @@ lazy val `unique-users-stream-processor` =
 
 lazy val `clicks-and-impressions-stream-processor` =
   (project in file("clicks-and-impressions-stream-processor"))
+    .enablePlugins(JavaAppPackaging)
     .settings(
       libraryDependencies ++= {
         Seq(
