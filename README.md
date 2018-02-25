@@ -26,4 +26,16 @@ docker-compose up
 ```
 
 #### Production-like setup ####
-Now, we will package up the application to be used in a production-like environment:
+Now, we will package up the different components of the system to be used in a production-like environment:
+```bash
+sbt universal:packageBin
+```
+
+In each module's `target` folder, you will find a `universal` folder containing a `zip` artifact.
+For example, if you want to run the `frontend` component:
+```bash
+cd frontend/target/universal
+unzip frontend-0.1.0-SNAPSHOT.zip
+cd frontend-0.1.0-SNAPSHOT
+./bin/frontend
+```
