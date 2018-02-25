@@ -102,14 +102,9 @@ transaction.
 However, this isn’t good enough because if concurrent updates happen, they are not automatically linearized, they are 
 actually denied and you will have to retry them manually. 
 
-So for example, I read, I get X, okay I'm going to write X' only if X was in the last spot, if not then fail.
-Employing Optimistic Locking with Version Number unfortunately won't cut it here as you will lose data.
-
-The Stream Processor component could be something like Spark Streams, Flink or Akka Streams. We went with Akka Streams 
-and Akka Streams Kafka. 
-
-Essentially this component takes a batch of events (bigger the better) and condenses this down to a single event. Now 
-I definitely glossed over this but I still plan to use HLL or an equivalent estimator to track unique counts because 
-I'm processing the data as it comes in and I don't plan on processing data records for the hour all in memory unless I 
-had something like a Spark Cluster. So you still end up having the same tables in Cassandra as above, we just do some 
-optimizations to batch data (to minimize writes) and avoid getting into (as many) concurrency problems as we did before.
+The Stream Processor component is implemented using Akka Streams and Akka Streams Kafka. Essentially this component 
+takes a batch of events (bigger the better) and condenses this down to a single event. This makes use of HLL to track 
+unique counts because I'm processing the data as it comes in and I don't plan on processing data records for the hour 
+all in memory unless I had something like a Spark Cluster. So you still end up having the same tables in Cassandra as 
+above, we just do some optimizations to batch data (to minimize writes) and avoid getting into (as many) concurrency 
+problems as we did before.
