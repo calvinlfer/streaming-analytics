@@ -38,16 +38,17 @@ object Main extends App with Web {
     ).withBootstrapServers(settings.kafka.uris)
 
   val kafkaRef: ActorRef = {
-    val actorSettings = settings.kafka.actor
+    val actorSettings   = settings.kafka.actor
+    val backoffSettings = settings.kafka.backoff
     val props = BackoffSupervisor.props(
       SmallestMailboxPool(
         nrOfInstances = actorSettings.minInstances,
         resizer = Some(DefaultResizer(actorSettings.minInstances, actorSettings.maxInstances))
       ).props(KafkaJournal.props(settings, kafkaProducerSettings)),
       childName = "journal",
-      minBackoff = 3.seconds,
-      maxBackoff = 30.seconds,
-      randomFactor = 0.2
+      minBackoff = backoffSettings.min,
+      maxBackoff = backoffSettings.max,
+      randomFactor = backoffSettings.randomness
     )
     system.actorOf(props, "kafka-router")
   }
@@ -55,7 +56,7 @@ object Main extends App with Web {
   override val journal: Journal         = new JournalImpl(kafkaRef)
   override val analytics: UserAnalytics = new UserAnalyticsImpl(uniqueUsersRepo, eventsCountRepo)
 
-  Http().bindAndHandle(routes, "0.0.0.0", 9001).onComplete {
+  Http().bindAndHandle(routes, settings.http.host, settings.http.port).onComplete {
     case Success(binding) =>
       println(s"Server online at http://${binding.localAddress.getHostName}:${binding.localAddress.getPort}")
 

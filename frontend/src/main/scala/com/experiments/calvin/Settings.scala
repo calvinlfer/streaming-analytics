@@ -25,6 +25,12 @@ class Settings private (config: Config) {
     object service {
       val timeout: FiniteDuration = getDuration("app.kafka.service.ask-timeout")
     }
+
+    object backoff {
+      val min: FiniteDuration = getDuration("app.kafka.backoff.min")
+      val max: FiniteDuration = getDuration("app.kafka.backoff.max")
+      val randomness: Double  = config.getInt("app.kafka.backoff.randomness")
+    }
   }
 
   object cassandra {
@@ -42,6 +48,11 @@ class Settings private (config: Config) {
       if (pass.nonEmpty) Some(pass) else None
     }
     val autoInitKeyspace: Boolean = config.getBoolean("app.cassandra.initialize-keyspace")
+  }
+
+  object http {
+    val host: String = config.getString("app.http.host")
+    val port: Int    = config.getInt("app.http.port")
   }
 }
 
