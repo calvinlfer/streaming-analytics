@@ -41,6 +41,7 @@ cd frontend-0.1.0-SNAPSHOT
 ```
 
 Run all the different components that make up the system:
+
 - `frontend`
 - `clicks-and-impressions-stream-processor`
 - `unique-users-stream-processor`
@@ -50,6 +51,7 @@ Run all the different components that make up the system:
 ![](visual.png)
 
 What are my queries?
+
 - Unique number of users by timestamp
 - Number of clicks by timestamp
 - Number of impressions by timestamp
