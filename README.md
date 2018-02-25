@@ -12,8 +12,10 @@ questions:
 The system is comprised of three distinct modules:
 
 - __frontend__: provides ingestion and querying endpoints
-- __clicks-and-impressions-stream-processor__: responsible for consuming click and impression events from the journal and aggregating them
-- __unique-users-stream-processor__: responsible for consuming events from the journal, aggregating them and performing cardinality estimation
+- __clicks-and-impressions-stream-processor__: responsible for consuming click and impression events from the journal 
+and aggregating them and pushing them to Cassandra
+- __unique-users-stream-processor__: responsible for consuming events from the journal, aggregating them and performing 
+cardinality estimation using HyperLogLog and pushing them to Cassandra
 
 ### Infrastructure ###
 
