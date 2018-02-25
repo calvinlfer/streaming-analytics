@@ -53,6 +53,11 @@ Run all the different components that make up the system:
 - `clicks-and-impressions-stream-processor`
 - `unique-users-stream-processor`
 
+Environment variables can be found in the `application.conf` of each module should you need to override any configuration.
+
+#### Development setup ####
+If you are using an IDE like IntelliJ, go to each module and run `Main`. It is set up to talk to the infrastructure running locally on your machine that was created by Docker Compose.
+
 ## Notes ##
 
 ![](visual.png)
