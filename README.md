@@ -25,6 +25,13 @@ decoupling modules. In order to spin up these dependencies, you can use
 docker-compose up
 ```
 
+When you want to stop the infrastructure services:
+```bash
+docker-compose down
+```
+
+__Note:__ Make sure your Docker VM has at least 4GB of RAM allocated as both containers consume quite a bit of memory and will exit with code 137 if you do not provide enough
+
 #### Production-like setup ####
 Now, we will package up the different components of the system to be used in a production-like environment:
 ```bash
